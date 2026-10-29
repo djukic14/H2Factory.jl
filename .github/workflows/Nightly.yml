@@ -1,0 +1,57 @@
+name: Julia Pre-Release
+
+# Split out of CI.yml, matching H2Trees. `nightly` used to be a row in the CI matrix, which meant an
+# upstream pre-release regression reddened every PR until Julia fixed it -- noise attached to the wrong
+# change. Weekly and `continue-on-error` keeps the early warning without that.
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON: ~
+  JULIA_LOAD_PATH: '@:@stdlib'
+  H2FACTORY_TESTUTILS_REVISION: '810a3c00d78c2a101f826261d049753e34b542ab'
+
+jobs:
+  test:
+    name: Julia pre-release - Linux - 1 thread
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check out pinned TestUtils
+        uses: actions/checkout@v6
+        with:
+          repository: djukic14/H2FactoryTestUtils.jl
+          ref: ${{ env.H2FACTORY_TESTUTILS_REVISION }}
+          path: .ci-testutils
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: pre
+      - uses: julia-actions/cache@v3
+      - name: Prepare isolated test environment
+        shell: julia --startup-file=no --color=yes {0}
+        env:
+          JULIA_PKG_PRECOMPILE_AUTO: '0'
+        run: |
+          testutils = joinpath(ENV["RUNNER_TEMP"], "H2FactoryTestUtils")
+          mv(joinpath(pwd(), ".ci-testutils"), testutils)
+          include(".github/ci/prepare-tests.jl")
+          project = prepare_tests(testutils; revision=ENV["H2FACTORY_TESTUTILS_REVISION"])
+          open(ENV["GITHUB_ENV"], "a") do io
+              println(io, "H2FACTORY_TEST_PROJECT=", project)
+          end
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: ${{ env.H2FACTORY_TEST_PROJECT }}
+      - name: Run package tests
+        shell: julia --startup-file=no --check-bounds=yes --depwarn=yes --project="${{ env.H2FACTORY_TEST_PROJECT }}" --color=yes {0}
+        run: include("test/runtests.jl")
+        env:
+          JULIA_NUM_THREADS: '1'
