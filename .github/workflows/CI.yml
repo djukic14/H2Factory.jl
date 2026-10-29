@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.ref != 'refs/heads/main') || github.run_number }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON: ~
+  H2FACTORY_TESTUTILS_REVISION: '0db797766473367096f5aecf6583c960dfa3b52d'
+
+jobs:
+  # Matrix copied from H2Trees' CI, so the package family has ONE convention rather than a per-repo
+  # dialect. Two rows carry their weight beyond "more coverage":
+  #
+  #   * `version: min` selects Julia 1.11 from Project.toml, including its native scoped values.
+  #   * The 4-thread row: Julia defaults to ONE thread, so before it every CI run this package had
+  #     exercised the traversal serially, while the traversal (per-level `@tasks` chunking over nodes
+  #     with per-chunk borrowed buffers) is what this package exists to provide. A real out-of-bounds
+  #     in level-transfer scratch sizing survived an entire downstream refactor and only appeared the
+  #     first time the suite ran at `-t4`.
+  #
+  # `nightly` moved OUT of this matrix and into `Nightly.yml` (weekly, `continue-on-error`), matching
+  # H2Trees: a pre-release regression should not redden a PR that did not cause it.
+  test:
+    name: ${{ matrix.name }}
+    env:
+      # Julia's path-list separator is platform-specific.
+      JULIA_LOAD_PATH: ${{ startsWith(matrix.os, 'windows-') && '@;@stdlib' || '@:@stdlib' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      actions: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Julia minimum - Linux - 1 thread
+            version: min
+            os: ubuntu-latest
+            arch: x64
+            threads: '1'
+            coverage: false
+          - name: Julia latest - Linux - 1 thread
+            version: '1'
+            os: ubuntu-latest
+            arch: x64
+            threads: '1'
+            coverage: true
+          - name: Julia latest - Windows - 1 thread
+            version: '1'
+            os: windows-latest
+            arch: x64
+            threads: '1'
+            coverage: false
+          - name: Julia latest - macOS - 1 thread
+            version: '1'
+            os: macos-latest
+            arch: default
+            threads: '1'
+            coverage: false
+          - name: Julia latest - Linux - 4 threads
+            version: '1'
+            os: ubuntu-latest
+            arch: x64
+            threads: '4'
+            coverage: false
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check out pinned TestUtils
+        uses: actions/checkout@v6
+        with:
+          repository: djukic14/H2FactoryTestUtils.jl
+          ref: ${{ env.H2FACTORY_TESTUTILS_REVISION }}
+          path: .ci-testutils
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v3
+      - name: Prepare isolated test environment
+        shell: julia --startup-file=no --color=yes {0}
+        env:
+          JULIA_PKG_PRECOMPILE_AUTO: '0'
+        run: |
+          workspace = ENV["GITHUB_WORKSPACE"]
+          testutils = joinpath(ENV["RUNNER_TEMP"], "H2FactoryTestUtils")
+          mv(joinpath(workspace, ".ci-testutils"), testutils)
+          include(joinpath(workspace, ".github", "ci", "prepare-tests.jl"))
+          project = prepare_tests(testutils; revision=ENV["H2FACTORY_TESTUTILS_REVISION"], root=workspace)
+          open(ENV["GITHUB_ENV"], "a") do io
+              println(io, "H2FACTORY_TEST_PROJECT=", project)
+          end
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: ${{ env.H2FACTORY_TEST_PROJECT }}
+      - name: Run package tests
+        shell: julia --startup-file=no --color=yes {0}
+        run: |
+          workspace = ENV["GITHUB_WORKSPACE"]
+          project = ENV["H2FACTORY_TEST_PROJECT"]
+          coverage = ENV["H2FACTORY_TEST_COVERAGE"]
+          tests = joinpath(workspace, "test", "runtests.jl")
+          run(Cmd(`$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`; dir=workspace))
+        env:
+          H2FACTORY_TEST_COVERAGE: ${{ matrix.coverage && 'user' || 'none' }}
+          JULIA_NUM_THREADS: ${{ matrix.threads }}
+      - uses: julia-actions/julia-processcoverage@v1
+        if: matrix.coverage
+      - uses: codecov/codecov-action@v6
+        if: matrix.coverage
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
