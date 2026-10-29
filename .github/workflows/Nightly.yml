@@ -23,9 +23,9 @@ jobs:
     timeout-minutes: 60
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Check out pinned TestUtils
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: djukic14/H2FactoryTestUtils.jl
           ref: ${{ env.H2FACTORY_TESTUTILS_REVISION }}
