@@ -1,0 +1,17 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+H2Factory = "15a95800-2d86-4c02-ab0d-b887130f60ac"
+H2Trees = "9db26ae3-82ff-4374-85e9-9ed87405fd16"
+LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[sources]
+H2Factory = {path = ".."}
+
+[compat]
+Documenter = "1"
+H2Trees = "0.4"
+LiveServer = "1"
+OhMyThreads = "0.8"
+StaticArrays = "1"

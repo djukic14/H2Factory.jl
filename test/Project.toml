@@ -1,0 +1,50 @@
+[deps]
+AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+BEAST = "bb4162c7-ba94-5a20-af32-d8ec4428bdd1"
+BlockSparseMatrices = "1ef78180-cc57-4e70-b6ec-c3e471307147"
+ClusterTrees = "5100927d-02aa-593a-b4f9-7235df19f0db"
+CompScienceMeshes = "3e66a162-7b8c-5da0-b8f8-124ecd2c3ae1"
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+H2Factory = "15a95800-2d86-4c02-ab0d-b887130f60ac"
+# H2FactoryTestUtils = "a0fc436c-bff3-4a55-806a-7ba6bb3cc4e6"
+H2Trees = "9db26ae3-82ff-4374-85e9-9ed87405fd16"
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+OhMyThreads = "67456a42-1dca-4109-a031-0a68de7e3ad5"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+# Keep these bounds aligned with the package's test target.
+[compat]
+AbstractFFTs = "1"
+Aqua = "=0.8.16"
+BEAST = "2.9"
+BlockSparseMatrices = "0.3"
+ClusterTrees = "0.2"
+CompScienceMeshes = "0.11, 0.12, 0.13"
+FFTW = "1"
+H2Factory = "0.1"
+# H2FactoryTestUtils = "0.1"
+H2Trees = "0.4.2"
+InteractiveUtils = "1"
+# Later formatter releases rewrite interpolation in generated moment docstrings.
+JuliaFormatter = "2.10 - 2.11.2"
+LinearAlgebra = "1"
+OhMyThreads = "0.8"
+Random = "1"
+SparseArrays = "1"
+StaticArrays = "1"
+Test = "1"
+julia = "1.11"
+
+# Local tests use sibling checkouts; these paths locate packages, not version bounds.
+[sources]
+BEAST = {path = "../../BEAST"}
+CompScienceMeshes = {path = "../../CompScienceMeshes"}
+H2Factory = {path = ".."}
+# H2FactoryTestUtils = {path = "../../H2FactoryTestUtils"}
+H2Trees = {path = "../../H2Trees"}

@@ -1,0 +1,103 @@
+name: Documentation
+
+# Split out of CI.yml and into a build/deploy pair, matching H2Trees. Previously ONE job ran
+# `julia-docdeploy` on every event while holding `contents: write` and `statuses: write`, so a pull
+# request that only needed to typecheck the docs carried publish rights for the whole run.
+#
+# This file deviates from H2Trees in one way, deliberately. H2Trees gates its deploy job on
+# `push` to main or a tag, which means its `push_preview=true` in `deploydocs` never actually fires.
+# H2Factory wants the pull request previews, so `deploy` runs for pull requests too. The split still
+# pays for itself: the build and the doctests run read-only, and `needs: build` means a preview is
+# never published from a tree whose doctests failed.
+#
+# For a pull request from a FORK, `GITHUB_TOKEN` is read-only and `DOCUMENTER_KEY` is unavailable.
+# Documenter detects that and skips deployment rather than failing, so the build job is what reports
+# on those runs.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.ref != 'refs/heads/main') || github.run_number }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON: ~
+
+jobs:
+  build:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: write # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Configure documentation environment
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - uses: julia-actions/julia-buildpkg@v1
+      # `docs/make.jl` sets `checkdocs=:all` and `warnonly=false`, so this step is what enforces the
+      # hand maintained API reference partition: a docstring on no page, or on two, fails here.
+      - name: Build documentation and doctests
+        shell: julia --project=docs --color=yes {0}
+        run: include(joinpath(pwd(), "docs", "make.jl"))
+      # Docstring doctests, which `makedocs` does not cover on its own.
+      - name: Run doctests
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Documenter: DocMeta, doctest
+          using H2Factory
+          DocMeta.setdocmeta!(H2Factory, :DocTestSetup, :(using H2Factory); recursive=true)
+          doctest(H2Factory)
+
+  deploy:
+    name: Deploy documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: build
+    # H2Trees allows only `push` to main or a tag here. Pull requests are added because H2Factory
+    # wants the `push_preview=true` previews. Everything else is excluded on purpose: on a feature
+    # branch `deploydocs` would correctly decide there is nothing to publish, after paying for a
+    # full instantiate and build to reach that conclusion.
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
+    permissions:
+      contents: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Configure documentation environment
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
