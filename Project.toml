@@ -27,7 +27,7 @@ H2Toeplitz = "AbstractFFTs"
 
 [compat]
 AbstractFFTs = "1"
-Aqua = "=0.8.16"
+Aqua = "=0.8.16, 0.8"
 BEAST = "2.9"
 BlockSparseMatrices = "0.3"
 ChunkSplitters = "3"
@@ -37,7 +37,6 @@ FFTW = "1"
 H2FactoryTestUtils = "0.1"
 H2Trees = "0.4.2"
 InteractiveUtils = "1"
-# Later formatter releases rewrite interpolation in generated moment docstrings.
 JuliaFormatter = "2.10 - 2.11.2"
 LinearAlgebra = "1"
 LinearMaps = "3"
