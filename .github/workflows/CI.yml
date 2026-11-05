@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - ci/diagnose-coverage-timeout
     tags:
       - '*'
   pull_request:
@@ -21,18 +20,7 @@ env:
   PYTHON: ~
 
 jobs:
-  # Matrix copied from H2Trees' CI, so the package family has ONE convention rather than a per-repo
-  # dialect. Two rows carry their weight beyond "more coverage":
-  #
-  #   * `version: min` selects Julia 1.11 from Project.toml, including its native scoped values.
-  #   * The 4-thread row: Julia defaults to ONE thread, so before it every CI run this package had
-  #     exercised the traversal serially, while the traversal (per-level `@tasks` chunking over nodes
-  #     with per-chunk borrowed buffers) is what this package exists to provide. A real out-of-bounds
-  #     in level-transfer scratch sizing survived an entire downstream refactor and only appeared the
-  #     first time the suite ran at `-t4`.
-  #
-  # `nightly` moved OUT of this matrix and into `Nightly.yml` (weekly, `continue-on-error`), matching
-  # H2Trees: a pre-release regression should not redden a PR that did not cause it.
+  # Temporary coverage comparison on PR #4. Restore the full matrix before merging.
   test:
     name: ${{ matrix.name }}
     env:
@@ -47,37 +35,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Julia minimum - Linux - 1 thread
-            version: min
-            os: ubuntu-latest
-            arch: x64
-            threads: '1'
-            coverage: false
           - name: Julia latest - Linux - 1 thread
             version: '1'
             os: ubuntu-latest
             arch: x64
             threads: '1'
-            # Temporary A/B control: keep everything except coverage unchanged.
-            coverage: false
-          - name: Julia latest - Windows - 1 thread
-            version: '1'
-            os: windows-latest
-            arch: x64
-            threads: '1'
-            coverage: false
-          - name: Julia latest - macOS - 1 thread
-            version: '1'
-            os: macos-latest
-            arch: default
-            threads: '1'
-            coverage: false
-          - name: Julia latest - Linux - 4 threads
-            version: '1'
-            os: ubuntu-latest
-            arch: x64
-            threads: '4'
-            coverage: false
+            coverage: true
 
     steps:
       - uses: actions/checkout@v6
