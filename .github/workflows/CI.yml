@@ -20,18 +20,7 @@ env:
   PYTHON: ~
 
 jobs:
-  # Matrix copied from H2Trees' CI, so the package family has ONE convention rather than a per-repo
-  # dialect. Two rows carry their weight beyond "more coverage":
-  #
-  #   * `version: min` selects Julia 1.11 from Project.toml, including its native scoped values.
-  #   * The 4-thread row: Julia defaults to ONE thread, so before it every CI run this package had
-  #     exercised the traversal serially, while the traversal (per-level `@tasks` chunking over nodes
-  #     with per-chunk borrowed buffers) is what this package exists to provide. A real out-of-bounds
-  #     in level-transfer scratch sizing survived an entire downstream refactor and only appeared the
-  #     first time the suite ran at `-t4`.
-  #
-  # `nightly` moved OUT of this matrix and into `Nightly.yml` (weekly, `continue-on-error`), matching
-  # H2Trees: a pre-release regression should not redden a PR that did not cause it.
+  # Test the minimum Julia version, current platforms, and threaded traversal.
   test:
     name: ${{ matrix.name }}
     env:
@@ -101,11 +90,19 @@ jobs:
       - name: Run package tests
         shell: julia --startup-file=no --color=yes {0}
         run: |
+          using LinearAlgebra
           workspace = ENV["GITHUB_WORKSPACE"]
           project = ENV["H2FACTORY_TEST_PROJECT"]
-          coverage = ENV["H2FACTORY_TEST_COVERAGE"]
+          coverage = ENV["H2FACTORY_TEST_COVERAGE"] == "user" ? "@$workspace" : "none"
           tests = joinpath(workspace, "test", "runtests.jl")
-          run(Cmd(`$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`; dir=workspace))
+          @info "Test configuration" julia=VERSION threads=Threads.nthreads() blas_threads=BLAS.get_num_threads() coverage
+          command = `$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`
+          if Sys.islinux() && isfile("/usr/bin/time")
+              command = `/usr/bin/time -v $command`
+          elseif Sys.islinux()
+              @warn "GNU time is unavailable; resource totals will not be recorded"
+          end
+          run(Cmd(command; dir=workspace))
         env:
           H2FACTORY_TEST_COVERAGE: ${{ matrix.coverage && 'user' || 'none' }}
           JULIA_NUM_THREADS: ${{ matrix.threads }}

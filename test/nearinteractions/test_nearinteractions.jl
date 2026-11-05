@@ -8,6 +8,8 @@ using H2Factory
 using H2FactoryTestUtils
 using BlockSparseMatrices
 using H2Trees
+include("../timing.jl")
+using .TestTiming: timed
 
 @testset "Near-interactions Galerkin" begin
     rng = H2FactoryTestUtils.checkrng()
@@ -44,7 +46,11 @@ using H2Trees
                     ),
                 ]
                     tree = makeit(X)
-                    A = assemble(op, X, X; quadstrat=quadstrat)
+                    meshname = m === m1 ? "sphere" : "cuboid"
+                    label = "Galerkin $(nameof(typeof(op))) $meshname $(nameof(testf)) dofs=$(numfunctions(X)) quadrature=1"
+                    A = timed(
+                        () -> assemble(op, X, X; quadstrat=quadstrat), "$label reference"
+                    )
 
                     assembler = SparseBEASTNearInteractionsAssembler{ComplexF64}(
                         op, X, X, quadstrat
@@ -53,11 +59,18 @@ using H2Trees
                     blockassembler = BlockBEASTNearInteractionsAssembler{ComplexF64}(
                         op, X, X, quadstrat
                     )
-                    A_sparse = assembler(tree, H2Trees.isnear; verbose=true)
+                    A_sparse = timed("$label sparse") do
+                        assembler(tree, H2Trees.isnear; verbose=true)
+                    end
 
-                    A_block = blockassembler(
-                        tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=false
-                    )
+                    A_block = timed("$label block") do
+                        blockassembler(
+                            tree,
+                            H2Trees.isnear;
+                            verbose=true,
+                            supportsgalerkinsymmetric=false,
+                        )
+                    end
 
                     A_near = nearinteractions(A, tree, H2Trees.isnear)
 
@@ -180,7 +193,25 @@ end
                             ),
                         )
 
-                        A = assemble(op, X, Y; quadstrat=quadstrat)
+                        testmesh = if mx === m1
+                            1
+                        elseif mx === m2
+                            2
+                        else
+                            3
+                        end
+                        trialmesh = if my === m1
+                            1
+                        elseif my === m2
+                            2
+                        else
+                            3
+                        end
+                        label = "Petrov $(nameof(typeof(op))) meshes=$testmesh,$trialmesh $(nameof(testf))/$(nameof(trialf)) dofs=$(numfunctions(X)),$(numfunctions(Y)) quadrature=1"
+                        A = timed(
+                            () -> assemble(op, X, Y; quadstrat=quadstrat),
+                            "$label reference",
+                        )
 
                         assembler = SparseBEASTNearInteractionsAssembler{ComplexF64}(
                             op, X, Y, quadstrat
@@ -189,8 +220,12 @@ end
                             op, X, Y, quadstrat
                         )
 
-                        A_sparse = assembler(tree, H2Trees.isnear; verbose=true)
-                        A_block = blockassembler(tree, H2Trees.isnear; verbose=true)
+                        A_sparse = timed("$label sparse") do
+                            assembler(tree, H2Trees.isnear; verbose=true)
+                        end
+                        A_block = timed("$label block") do
+                            blockassembler(tree, H2Trees.isnear; verbose=true)
+                        end
                         nnz(A_sparse) == 0 && continue
                         println("Compression: ", nnz(A_sparse) / prod(size(A)))
 
@@ -301,6 +336,8 @@ end
             for testf in [raviartthomas, buffachristiansen]
                 X = testf(m)
                 quadstrat = BEAST.DoubleNumWiltonSauterQStrat(7, 7, 7, 7, 7, 7, 7, 7)
+                meshname = m === m1 ? "sphere" : "cuboid"
+                label = "Galerkin symmetry $(nameof(typeof(op))) $meshname $(nameof(testf)) dofs=$(numfunctions(X)) quadrature=7"
                 tree = buildtree(
                     X;
                     builder=TwoNTreeBuilder(;
@@ -317,13 +354,17 @@ end
                 blockassembler = BlockBEASTNearInteractionsAssembler{ComplexF64}(
                     op, X, X, quadstrat
                 )
-                A_sparse = assembler(
-                    tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=false
-                )
+                A_sparse = timed("$label sparse") do
+                    assembler(
+                        tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=false
+                    )
+                end
 
-                A_block = blockassembler(
-                    tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=true
-                )
+                A_block = timed("$label symmetric block") do
+                    blockassembler(
+                        tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=true
+                    )
+                end
 
                 x = zeros(ComplexF64, size(A_sparse, 2))
                 for i in 1:size(A_sparse, 2)
