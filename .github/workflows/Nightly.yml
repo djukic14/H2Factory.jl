@@ -14,8 +14,6 @@ permissions:
 env:
   PYTHON: ~
   JULIA_LOAD_PATH: '@:@stdlib'
-  # Restore TestUtils checkout and dependent tests after its registration.
-  # H2FACTORY_TESTUTILS_REVISION: '0db797766473367096f5aecf6583c960dfa3b52d'
 
 jobs:
   test:
@@ -25,13 +23,6 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
-      # - name: Check out pinned TestUtils
-      #   uses: actions/checkout@v6
-      #   with:
-      #     repository: djukic14/H2FactoryTestUtils.jl
-      #     ref: ${{ env.H2FACTORY_TESTUTILS_REVISION }}
-      #     path: .ci-testutils
-      #     persist-credentials: false
       - uses: julia-actions/setup-julia@v3
         with:
           version: pre
@@ -42,10 +33,7 @@ jobs:
           JULIA_PKG_PRECOMPILE_AUTO: '0'
         run: |
           workspace = ENV["GITHUB_WORKSPACE"]
-          # testutils = joinpath(ENV["RUNNER_TEMP"], "H2FactoryTestUtils")
-          # mv(joinpath(workspace, ".ci-testutils"), testutils)
           include(joinpath(workspace, ".github", "ci", "prepare-tests.jl"))
-          # project = prepare_tests(testutils; revision=ENV["H2FACTORY_TESTUTILS_REVISION"], root=workspace)
           project = prepare_tests(; root=workspace)
           open(ENV["GITHUB_ENV"], "a") do io
               println(io, "H2FACTORY_TEST_PROJECT=", project)
