@@ -1,22 +1,28 @@
 using Test
 using H2Factory
+include("timing.jl")
+using .TestTiming: timed
 
 # Tests use the `module Test*` + plain `@testset` convention (mirroring iFMM), not
 # TestItems/TestItemRunner: every leaf test file is its own module (per-file isolation), each
 # subdirectory has a `runtests.jl` grouping its leaves under a named `@testset`, and this top-level
 # file includes those under one outer `@testset` plus the quality gates.
 @testset verbose = true "H2Factory" begin
-    include("maps/runtests.jl")
-    include("moments/runtests.jl")
-    include("H2BEAST/runtests.jl")
-    include("H2Trees/runtests.jl")
-    include("nearinteractions/runtests.jl")
-    include("farinteractions/runtests.jl")
-    include("i2otranslationcollection/runtests.jl")
-    include("H2BlockSparse/runtests.jl")
-    include("H2Toeplitz/runtests.jl")
-    include("diagnostics/runtests.jl")
-    include("Package/runtests.jl")
+    for group in (
+        "maps",
+        "moments",
+        "H2BEAST",
+        "H2Trees",
+        "nearinteractions",
+        "farinteractions",
+        "i2otranslationcollection",
+        "H2BlockSparse",
+        "H2Toeplitz",
+        "diagnostics",
+        "Package",
+    )
+        timed(() -> include(joinpath(group, "runtests.jl")), group)
+    end
 
     @testset "Code quality (Aqua.jl)" begin
         using Aqua
@@ -26,11 +32,13 @@ using H2Factory
         # (`NTuple{0,I}` doesn't actually constrain `I`), which is never exercised in practice
         # (moments are always constructed with a concrete nonzero-length size tuple). Same call as
         # iFMM's identically-shaped constructors, scoped out there for the same reason.
-        Aqua.test_all(H2Factory; unbound_args=false)
+        timed(() -> Aqua.test_all(H2Factory; unbound_args=false), "Aqua")
     end
 
     @testset "Code formatting (JuliaFormatter.jl)" begin
         using JuliaFormatter
-        @test JuliaFormatter.format(pkgdir(H2Factory), overwrite=false)
+        timed("JuliaFormatter") do
+            @test JuliaFormatter.format(pkgdir(H2Factory), overwrite=false)
+        end
     end
 end

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - ci/diagnose-coverage-timeout
     tags:
       - '*'
   pull_request:
@@ -57,7 +58,8 @@ jobs:
             os: ubuntu-latest
             arch: x64
             threads: '1'
-            coverage: true
+            # Temporary A/B control: keep everything except coverage unchanged.
+            coverage: false
           - name: Julia latest - Windows - 1 thread
             version: '1'
             os: windows-latest
@@ -101,11 +103,19 @@ jobs:
       - name: Run package tests
         shell: julia --startup-file=no --color=yes {0}
         run: |
+          using LinearAlgebra
           workspace = ENV["GITHUB_WORKSPACE"]
           project = ENV["H2FACTORY_TEST_PROJECT"]
           coverage = ENV["H2FACTORY_TEST_COVERAGE"]
           tests = joinpath(workspace, "test", "runtests.jl")
-          run(Cmd(`$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`; dir=workspace))
+          @info "Test configuration" julia=VERSION threads=Threads.nthreads() blas_threads=BLAS.get_num_threads() coverage
+          command = `$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`
+          if Sys.islinux() && isfile("/usr/bin/time")
+              command = `/usr/bin/time -v $command`
+          elseif Sys.islinux()
+              @warn "GNU time is unavailable; resource totals will not be recorded"
+          end
+          run(Cmd(command; dir=workspace))
         env:
           H2FACTORY_TEST_COVERAGE: ${{ matrix.coverage && 'user' || 'none' }}
           JULIA_NUM_THREADS: ${{ matrix.threads }}
