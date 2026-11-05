@@ -69,7 +69,7 @@ jobs:
           using LinearAlgebra
           workspace = ENV["GITHUB_WORKSPACE"]
           project = ENV["H2FACTORY_TEST_PROJECT"]
-          coverage = ENV["H2FACTORY_TEST_COVERAGE"]
+          coverage = ENV["H2FACTORY_TEST_COVERAGE"] == "user" ? "@$workspace" : "none"
           tests = joinpath(workspace, "test", "runtests.jl")
           @info "Test configuration" julia=VERSION threads=Threads.nthreads() blas_threads=BLAS.get_num_threads() coverage
           command = `$(Base.julia_cmd()) --startup-file=no --check-bounds=yes --depwarn=yes --code-coverage=$coverage --project=$project --color=yes $tests`
