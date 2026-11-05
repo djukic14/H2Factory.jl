@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 690" role="img" aria-labelledby="title description">
+  <title id="title">From construction to multiplication</title>
+  <desc id="description">The method constructs a shared core. H2Workspace allocates moments, scratch and schedules. mul! combines near multiplication with the far-field tree passes.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M 0 0 L 7 3.5 L 0 7" fill="#737373"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, sans-serif; fill: #303030; text-anchor: middle; }
+    .heading { font-size: 23px; font-weight: 600; }
+    .body { font-size: 17px; }
+    .call { font-family: ui-monospace, monospace; font-size: 16px; }
+    .arrow { fill: none; stroke: #737373; stroke-width: 1.5; marker-end: url(#arrow); }
+  </style>
+  <rect width="760" height="690" fill="white"/>
+  <rect x="45" y="15" width="670" height="82" rx="6" fill="#f4f4f4"/>
+  <text class="heading" x="380" y="47">Your method's construction</text>
+  <text class="body" x="380" y="76">Tree, plans, near operator, collections, translations</text>
+  <path class="arrow" d="M 380 100 V 144"/>
+  <text class="call" x="480" y="128">MyCore(...)</text>
+  <rect x="145" y="150" width="470" height="74" rx="6" fill="#f2edf8"/>
+  <text class="heading" x="380" y="181" style="fill:#9558b2">Core</text>
+  <text class="body" x="380" y="209">Shared, read-only method data</text>
+  <path class="arrow" d="M 380 227 V 278"/>
+  <text class="call" x="380" y="260" style="paint-order:stroke;stroke:white;stroke-width:8">H2Workspace(core, scheduling)</text>
+  <rect x="100" y="284" width="560" height="80" rx="6" fill="#edf1fc"/>
+  <text class="heading" x="380" y="317" style="fill:#4063d8">Workspace A</text>
+  <text class="body" x="380" y="346">Moments, scratch, schedules</text>
+  <path class="arrow" d="M 380 367 V 418"/>
+  <text class="call" x="470" y="397">mul!(y, A, x)</text>
+  <path class="arrow" d="M 380 421 H 175 V 453"/>
+  <path class="arrow" d="M 380 421 H 540 V 453"/>
+  <rect x="30" y="460" width="290" height="124" rx="6" fill="#faeeee"/>
+  <text class="heading" x="175" y="493" style="fill:#cb3c33">Near contribution</text>
+  <text class="call" x="175" y="528">nearmul!(y, A, x)</text>
+  <text class="body" x="175" y="558">Direct near operator</text>
+  <rect x="350" y="460" width="380" height="124" rx="6" fill="#edf6ed"/>
+  <text class="heading" x="540" y="493" style="fill:#389826">Far contribution</text>
+  <text class="call" x="540" y="522">farmul!(y, A, x)</text>
+  <text class="body" x="540" y="549">aggregate! &#8594; disaggregate!</text>
+  <text class="body" x="540" y="573">I2O runs in the selected pass</text>
+  <path class="arrow" d="M 175 588 V 615 H 380 V 641"/>
+  <path class="arrow" d="M 540 588 V 615 H 380"/>
+  <text class="heading" x="380" y="676">Combined result y</text>
+</svg>
