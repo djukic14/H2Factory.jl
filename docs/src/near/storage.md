@@ -16,11 +16,10 @@ Its default reads `core.nearinteractions`.
 The full matrix size must match the test and trial spaces, even though only
 near entries contribute. Petrov operators can be rectangular.
 
-`H2Factory.SparseBEASTNearInteractionsAssembler{T}` uses the H2BEAST extension.
-`H2Factory.BlockBEASTNearInteractionsAssembler{T}` uses H2BlockSparse.
-These select assembly and storage, not the geometric near predicate.
-Symmetric assembly requires the [explicit declarations](assembly.md); symmetry
-here means transpose symmetry, not automatically Hermitian symmetry.
+`H2Factory.SparseStorage()` and `H2Factory.BlockSparseStorage()` in an
+`H2Factory.AssemblyStrategy` select the sparse and block-sparse
+representations; the latter needs the H2BlockSparse extension. They select
+storage, not the geometric near predicate.
 
 ## Apply the near operator
 

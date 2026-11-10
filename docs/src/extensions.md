@@ -5,8 +5,8 @@ FFT backend. Extensions add those operations when their dependencies load.
 
 | Extension | Dependencies | Provides |
 | :--- | :--- | :--- |
-| `H2BEAST` | BEAST, ClusterTrees, CompScienceMeshes | Moment assembly, sparse near assembly, operator wrappers |
-| `H2BlockSparse` | BEAST, CompScienceMeshes, BlockSparseMatrices | Block-sparse near assembly |
+| `H2BEAST` | BEAST, ClusterTrees, CompScienceMeshes | Moment assembly, `BEASTKernelMatrix` and its `localkernelmatrix`, operator wrappers |
+| `H2BlockSparse` | BlockSparseMatrices | `BlockSparseStorage` for kernel-matrix assembly |
 | `H2Toeplitz` | AbstractFFTs | Toeplitz coupling construction and application |
 
 A concrete FFT backend, such as FFTW, must also provide the planning operations.

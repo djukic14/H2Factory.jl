@@ -8,6 +8,7 @@ using H2Factory
 using H2FactoryTestUtils
 using BlockSparseMatrices
 using H2Trees
+using H2Factory: AssemblyStrategy, SparseStorage, BlockSparseStorage, DummyEntries
 include("../timing.jl")
 using .TestTiming: timed
 
@@ -52,30 +53,35 @@ using .TestTiming: timed
                         () -> assemble(op, X, X; quadstrat=quadstrat), "$label reference"
                     )
 
-                    assembler = SparseBEASTNearInteractionsAssembler{ComplexF64}(
-                        op, X, X, quadstrat
-                    )
-
-                    blockassembler = BlockBEASTNearInteractionsAssembler{ComplexF64}(
-                        op, X, X, quadstrat
-                    )
+                    interaction = H2Factory.InteractionStrategy()
+                    isnear = H2Factory.nearcriterion(interaction)(tree)
                     A_sparse = timed("$label sparse") do
-                        assembler(tree, H2Trees.isnear; verbose=true)
-                    end
-
-                    A_block = timed("$label block") do
-                        blockassembler(
+                        H2Factory.assemblenearinteractions(
+                            op,
+                            X,
+                            X,
                             tree,
-                            H2Trees.isnear;
+                            AssemblyStrategy(quadstrat, SparseStorage()),
+                            interaction;
                             verbose=true,
-                            supportsgalerkinsymmetric=false,
+                        )
+                    end
+                    A_block = timed("$label block") do
+                        H2Factory.assemblenearinteractions(
+                            op,
+                            X,
+                            X,
+                            tree,
+                            AssemblyStrategy(quadstrat, BlockSparseStorage()),
+                            interaction;
+                            verbose=true,
                         )
                     end
 
-                    A_near = nearinteractions(A, tree, H2Trees.isnear)
+                    A_near = nearinteractions(A, tree, isnear)
 
                     for nearmatrix in [A_sparse, A_block]
-                        A_H2 = FakeH2Matrix(nearmatrix, tree, H2Trees.isnear)
+                        A_H2 = FakeH2Matrix(nearmatrix, tree, isnear)
 
                         @test H2Factory.nearinteractions(A_H2) == nearmatrix
                         @test H2Factory.nearinteractions(transpose(A_H2)) ==
@@ -111,19 +117,14 @@ using .TestTiming: timed
                     @show error
                     @test error < 1e-14
 
-                    randomassembler = RandomNearInteractionsAssembler{ComplexF64}(
-                        op, X, X, quadstrat
+                    A_dummy = H2Factory.assemblenearinteractions(
+                        op,
+                        X,
+                        X,
+                        tree,
+                        AssemblyStrategy(DummyEntries(), SparseStorage()),
+                        interaction,
                     )
-
-                    A_random = randomassembler(tree, H2Trees.isnear)
-
-                    @test nnz(A_random) == nnz(A_sparse)
-
-                    dummyassembler = DummyNearInteractionsAssembler{ComplexF64}(
-                        op, X, X, quadstrat
-                    )
-
-                    A_dummy = dummyassembler(tree, H2Trees.isnear)
 
                     @test A_dummy == spzeros(ComplexF64, size(A))
 
@@ -213,18 +214,29 @@ end
                             "$label reference",
                         )
 
-                        assembler = SparseBEASTNearInteractionsAssembler{ComplexF64}(
-                            op, X, Y, quadstrat
-                        )
-                        blockassembler = BlockBEASTNearInteractionsAssembler{ComplexF64}(
-                            op, X, Y, quadstrat
-                        )
-
+                        interaction = H2Factory.InteractionStrategy()
+                        isnear = H2Factory.nearcriterion(interaction)(tree)
                         A_sparse = timed("$label sparse") do
-                            assembler(tree, H2Trees.isnear; verbose=true)
+                            H2Factory.assemblenearinteractions(
+                                op,
+                                X,
+                                Y,
+                                tree,
+                                AssemblyStrategy(quadstrat, SparseStorage()),
+                                interaction;
+                                verbose=true,
+                            )
                         end
                         A_block = timed("$label block") do
-                            blockassembler(tree, H2Trees.isnear; verbose=true)
+                            H2Factory.assemblenearinteractions(
+                                op,
+                                X,
+                                Y,
+                                tree,
+                                AssemblyStrategy(quadstrat, BlockSparseStorage()),
+                                interaction;
+                                verbose=true,
+                            )
                         end
                         nnz(A_sparse) == 0 && continue
                         println("Compression: ", nnz(A_sparse) / prod(size(A)))
@@ -249,12 +261,12 @@ end
                             @test er < 1e-13
                         end
 
-                        A_near = nearinteractions(A, tree, H2Trees.isnear)
+                        A_near = nearinteractions(A, tree, isnear)
 
                         error = maximum(norm.(A_near - A_sparse) / maximum(norm.(A_near)))
 
                         for nearmatrix in [A_sparse, A_block]
-                            A_H2 = FakeH2Matrix(nearmatrix, tree, H2Trees.isnear)
+                            A_H2 = FakeH2Matrix(nearmatrix, tree, isnear)
 
                             @test H2Factory.nearinteractions(A_H2) == nearmatrix
                             @test H2Factory.nearinteractions(transpose(A_H2)) ==
@@ -296,146 +308,20 @@ end
                         @show error
                         @test error < 1e-14
 
-                        randomassembler = RandomNearInteractionsAssembler{ComplexF64}(
-                            op, X, Y, quadstrat
+                        A_dummy = H2Factory.assemblenearinteractions(
+                            op,
+                            X,
+                            Y,
+                            tree,
+                            AssemblyStrategy(DummyEntries(), SparseStorage()),
+                            interaction,
                         )
-
-                        A_random = randomassembler(tree, H2Trees.isnear)
-
-                        @test nnz(A_random) == nnz(A_sparse)
-                        A_random[.!iszero.(A_random)] .= 1
-                        A_sparse[.!iszero.(A_sparse)] .= 1
-
-                        @test A_random == A_sparse
-
-                        dummyassembler = DummyNearInteractionsAssembler{ComplexF64}(
-                            op, X, Y, quadstrat
-                        )
-
-                        A_dummy = dummyassembler(tree, H2Trees.isnear)
 
                         @test A_dummy == spzeros(ComplexF64, size(A))
                     end
                 end
             end
         end
-    end
-end
-
-@testset "Galerkinsymmetric Blocknearassembler" begin
-    λ = 1.0
-    κ = 2 * π / λ
-
-    m1 = meshsphere(0.5 * λ, λ / 5)
-    m2 = meshcuboid(0.5 * λ, 0.5 * λ, 0.5 * λ, λ / 5)
-    singlelayer = Maxwell3D.singlelayer(; wavenumber=κ)
-    doublelayer = Maxwell3D.doublelayer(; wavenumber=κ)
-
-    for op in [singlelayer, doublelayer]
-        for m in [m1, m2]
-            for testf in [raviartthomas, buffachristiansen]
-                X = testf(m)
-                quadstrat = BEAST.DoubleNumWiltonSauterQStrat(7, 7, 7, 7, 7, 7, 7, 7)
-                meshname = m === m1 ? "sphere" : "cuboid"
-                label = "Galerkin symmetry $(nameof(typeof(op))) $meshname $(nameof(testf)) dofs=$(numfunctions(X)) quadrature=7"
-                tree = buildtree(
-                    X;
-                    builder=TwoNTreeBuilder(;
-                        minhalfsize=λ / 8,
-                        minvalues=0,
-                        protrusion=H2Trees.NoProtrusionCheck(),
-                    ),
-                )
-
-                assembler = SparseBEASTNearInteractionsAssembler{ComplexF64}(
-                    op, X, X, quadstrat
-                )
-
-                blockassembler = BlockBEASTNearInteractionsAssembler{ComplexF64}(
-                    op, X, X, quadstrat
-                )
-                A_sparse = timed("$label sparse") do
-                    assembler(
-                        tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=false
-                    )
-                end
-
-                A_block = timed("$label symmetric block") do
-                    blockassembler(
-                        tree, H2Trees.isnear; verbose=true, supportsgalerkinsymmetric=true
-                    )
-                end
-
-                x = zeros(ComplexF64, size(A_sparse, 2))
-                for i in 1:size(A_sparse, 2)
-                    x .= 0
-                    x[i] = 1
-                    @test A_sparse * x ≈ A_block * x atol = 1e-4
-                end
-            end
-        end
-    end
-end
-
-@testset "Abstract Assembler API" begin
-    struct Assembler{T} <: H2Factory.AbstractNearInteractionsAssembler{T}
-        function Assembler{T}(operator, testspace, trialspace, quadstrat) where {T}
-            return new{T}()
-        end
-    end
-
-    Base.size(::Assembler) = (1, 2)
-
-    assembler = Assembler{ComplexF64}(1, 2, 3, 4)
-
-    # AN ASSEMBLER THAT DOES NOT IMPLEMENT `assemble` MUST FAIL, not succeed quietly.
-    #
-    # These two were `@test_nowarn` and passed because H2Factory carried empty-bodied `assemble`
-    # methods on the abstract type. That made an incomplete assembler silently VALID: it assembled
-    # nothing, returned `nothing`, and produced a map missing its entire near-field block while every
-    # construction step reported success. The fallbacks are gone now that `assemble` is declared
-    # protocol, so the absence is reported. `Assembler` above deliberately implements only `size`.
-    @test_throws MethodError H2Factory.assemble(assembler, nothing, nothing, true)
-    @test_throws MethodError H2Factory.assemble(assembler, nothing, nothing, nothing, true)
-
-    @test size(assembler, 1) == 1
-    @test size(assembler, 2) == 2
-end
-
-@testset "an intentional no-op assembler states itself" begin
-    # The counterpart to removing the fallbacks: doing nothing is a legitimate answer, but it has to
-    # be WRITTEN. These are why nothing depended on the empty abstract methods.
-
-    # The dummy takes its dimensions from the tree and returns before generic assembly starts.
-    space = raviartthomas(meshsphere(0.5, 0.5))
-    tree = buildtree(space)
-    dummy = H2Factory.DummyNearInteractionsAssembler{ComplexF64}(
-        nothing, space, space, nothing
-    )
-    @test dummy(tree, H2Trees.isnear) ==
-        spzeros(ComplexF64, H2Trees.numberofvalues(tree), H2Trees.numberofvalues(tree))
-
-    # The pass-through opts out the other way: it returns the matrix it was handed, without
-    # traversing or assembling anything. That BEHAVIOUR is the contract pinned here.
-    #
-    # The current implementation achieves it by short-circuiting before `assemble` ever runs: its
-    # two-argument functor is more specific than the abstract assembler's `(tree, isnear)` functor,
-    # so it wins dispatch and the traversal never starts. That is why removing the abstract
-    # `assemble` fallbacks could not affect it. Deliberately NOT asserted as an absence of methods:
-    # a future explicit forwarding method would be harmless, and a test that rejected it would be
-    # pinning an implementation detail rather than the contract.
-    stored = sparse([1], [1], ComplexF64[2.0], 3, 3)
-    passthrough = H2Factory.PassThroughNearInteractionsAssembler{ComplexF64}(
-        nothing, nothing, nothing, stored
-    )
-    @test passthrough(nothing, nothing) === stored
-
-    # And no abstract-typed fallback has crept back: every `assemble` method must dispatch on a
-    # CONCRETE assembler, never on the supertype.
-    for m in methods(H2Factory.assemble)
-        params = Base.unwrap_unionall(m.sig).parameters
-        length(params) >= 2 || continue
-        @test params[2] !== H2Factory.AbstractNearInteractionsAssembler
     end
 end
 

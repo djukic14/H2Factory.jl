@@ -20,82 +20,90 @@ plans; otherwise interactions can be omitted or counted twice.
 selection, and traversal mode. It belongs to the whole interaction partition,
 not only the near field. H2Trees documents the geometric predicates and plans.
 
-## Select an assembler
+## Assemble the near interactions
+
+```text
+H2Factory.assemblenearinteractions(op, testspace, trialspace, tree,
+    assemblystrategy, interaction; verbose=false)
+```
+
+The operator and spaces define a kernel matrix and its scalar type. The
+assembly strategy says how its entries are evaluated, how they are stored and
+how the work is scheduled:
+
+```text
+H2Factory.AssemblyStrategy(matrixdata, storage; scheduler=DynamicScheduler())
+```
+
+- `matrixdata` is passed to `H2Factory.buildkernelmatrix(op, testspace,
+  trialspace, matrixdata)`. For a BEAST operator it is the quadrature strategy,
+  and the [H2BEAST extension](../extensions.md) returns a
+  `H2Factory.BEASTKernelMatrix`.
+- `storage` is `H2Factory.SparseStorage()` for a `SparseMatrixCSC` or
+  `H2Factory.BlockSparseStorage()` for a `BlockSparseMatrix`, which needs the
+  H2BlockSparse extension.
+- `scheduler` is the OhMyThreads scheduler that distributes the near blocks.
+
+A kernel matrix built elsewhere, such as a `H2Factory.PointKernelMatrix`, is
+assembled with the same strategies:
+
+```text
+H2Factory.assemblenearinteractions(kernelmatrix, tree, assemblystrategy,
+    interaction; verbose=false)
+```
+
+## Write a kernel matrix
+
+A kernel matrix subtypes `H2Factory.AbstractKernelMatrix{T}`, implements
+`size`, and adds its entries to a block:
+
+```text
+(kernelmatrix::MyKernelMatrix)(block, rows, columns)
+```
+
+`rows` and `columns` are global indices, and `block[m, n]` receives the entry
+for `rows[m]` and `columns[n]`. Blocks are evaluated concurrently, so the call
+must be safe for concurrent tasks. `H2Factory.buildkernelmatrix` methods for
+the kernel family map an operator, spaces and matrix data onto the matrix.
+
+## Use existing data
+
+`H2Factory.DummyEntries()` as matrix data selects a
+`H2Factory.DummyKernelMatrix`. It has no near blocks, so assembly walks no
+tree and returns an empty matrix in the selected storage. Use it for tests or
+an intentionally far-only map; it is not a complete physical near field.
+
+`H2Factory.RandomEntries()` selects a `H2Factory.RandomKernelMatrix` of the
+same size and scalar type. Assembly walks the tree as for the real kernel, so
+the near matrix has the real sparsity, but its entries are random. Use it to
+check or measure storage and multiplication without evaluating the kernel.
+
+An already assembled near matrix can be stored on the core directly; it must
+match the map's tree and spaces.
+
+## Strategies of earlier releases
+
+The strategies and assemblers of earlier releases remain available and map
+onto an `AssemblyStrategy`:
 
 ```text
 H2Factory.assemblenearinteractions(op, testspace, trialspace, tree, γ,
     nearstrategy, interaction; verbose=false)
 ```
 
-This builds an assembler and calls it with `(tree, predicate)`. The built-in
-`BlockBEASTNearInteractionsStrategy(quadstrategy)` selects block-sparse BEAST
-assembly when its [extension](../extensions.md) is loaded.
-
-A custom strategy derives from `H2Factory.AbstractNearInteractionsStrategy`
-and implements:
-
-```text
-H2Factory.buildnearinteractionsassembler(op, testspace, trialspace, γ,
-    strategy::MyNearStrategy)
-```
-
-Return a subtype of `H2Factory.AbstractNearInteractionsAssembler{T}`.
-It supplies `size(assembler)` and the assembly methods below. Default operator
-and space accessors read `operator`, `testspace`, and `trialspace` fields.
-
-```text
-H2Factory.assemble(assembler::MyAssembler, values, nearvalues, verbose)
-H2Factory.assemble(assembler::MyAssembler, selfvalues, values, nearvalues, verbose)
-```
-
-The first receives matching row and column groups of global basis indices.
-The second separates self interactions for symmetric Galerkin assembly.
-It is used only when both `supportsgalerkinsymmetric(typeof(assembler))`
-and `isgalerkinsymmetric(typeof(op))` opt in, on H2Factory's generics.
-Both default to false. An omitted assembly method raises `MethodError`.
-
-### Symmetric Galerkin assembly
-
-The two declarations answer different questions:
-
-| Query on H2Factory | Declares |
+| Earlier name | Assembly strategy |
 | :--- | :--- |
-| `isgalerkinsymmetric(::Type{MyOperator})` | The operator has transpose symmetry for this assembly route |
-| `supportsgalerkinsymmetric(::Type{MyAssembler})` | The assembler implements the symmetric assembly form |
+| `SparseBEASTNearInteractionsAssembler` | `AssemblyStrategy(quadstrat, SparseStorage(), StaticScheduler())` |
+| `BlockBEASTNearInteractionsStrategy` | `AssemblyStrategy(quadstrat, BlockSparseStorage(), DynamicScheduler())` |
+| `DummyNearInteractionsStrategy` | `AssemblyStrategy(DummyEntries(), SparseStorage(), SerialScheduler())` |
 
-The value-level `supportsgalerkinsymmetric(assembler)` combines both.
-This example checks selection only; it does not implement or execute an assembler:
-
-```jldoctest symmetric-trait-guide
-using H2Factory
-
-struct GuideSymmetricOperator end
-struct GuideOtherOperator end
-struct GuideSymmetricAssembler{O} <: H2Factory.AbstractNearInteractionsAssembler{Float64}
-    operator::O
-end
-H2Factory.isgalerkinsymmetric(::Type{GuideSymmetricOperator}) = true
-a = GuideSymmetricAssembler(GuideSymmetricOperator())
-before = H2Factory.supportsgalerkinsymmetric(a)
-H2Factory.supportsgalerkinsymmetric(::Type{<:GuideSymmetricAssembler}) = true
-b = GuideSymmetricAssembler(GuideOtherOperator())
-(before, H2Factory.supportsgalerkinsymmetric(a), H2Factory.supportsgalerkinsymmetric(b))
-
-# output
-
-(false, true, false)
-```
-
-An actual opt-in also requires the self/off-diagonal assembly method shown
-above and correct symmetric storage. Hermitian symmetry alone is not a
-substitute for transpose symmetry. The block-tree route uses the ordinary
-assembly form, not this single-tree Galerkin optimization.
-
-## Use existing data
-
-`H2Factory.PassThroughNearInteractionsStrategy(N)` returns an already assembled
-near matrix unchanged. It does not check or filter N against the tree.
-`DummyNearInteractionsStrategy(quadstrategy)` produces a zero near block for
-tests or an intentionally far-only map; it is not a complete physical near field.
+A custom `AbstractNearInteractionsStrategy` implements
+`H2Factory.buildnearinteractionsassembler` and returns a subtype of
+`H2Factory.AbstractNearInteractionsAssembler{T}`. Its accessors `operator`,
+`testspace`, `trialspace` and `quadstrategy` read the fields of these names,
+and `assemblystrategy(assembler)` gives its assembly strategy, so any kernel
+family with a `buildkernelmatrix` method is assembled. `γ` and the type
+parameter `T` no longer set the scalar type: entries have the scalar type of
+the kernel matrix.
 
 Next: [storage and multiplication](storage.md).
