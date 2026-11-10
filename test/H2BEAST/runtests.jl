@@ -4,7 +4,7 @@ using Test
 
 @testset verbose = true "H2BEAST" begin
     include("test_wrappers.jl")
-    include("test_sparseassembler.jl")
+    include("test_beastkernelmatrix.jl")
     include("test_assemblemoments_driver.jl")
     include("test_assemblemoments_potential.jl")
 end

@@ -1,7 +1,6 @@
 module H2BEAST
 using BEAST
 using H2Factory
-using SparseArrays
 using CompScienceMeshes
 using LinearAlgebra
 import H2Factory: @efie, @mw3Dweaklysingular, @mw3Dhypersingular, @mw3Ddoublelayer
@@ -14,9 +13,8 @@ using StaticArrays
 using OhMyThreads
 
 include("moments/assemblemoments.jl")
-include("nearinteractions/sparseassembly.jl")
-include("nearinteractions/randomnearinteractions.jl")
-include("nearinteractions/sparsenearinteractions.jl")
+include("kernelmatrices/beastkernelmatrix.jl")
+include("kernelmatrices/localbeastkernelmatrix.jl")
 
 include("wrappers/beastwrappers.jl")
 include("wrappers/maxwell/efie.jl")

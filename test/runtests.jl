@@ -13,6 +13,7 @@ using .TestTiming: timed
         "moments",
         "H2BEAST",
         "H2Trees",
+        "kernelmatrices",
         "nearinteractions",
         "farinteractions",
         "i2otranslationcollection",

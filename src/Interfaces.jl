@@ -301,19 +301,4 @@ so implementations must filter for leaves.
 """
 function aggregateleafchunk! end
 
-# --- Near-interaction assembly -------------------------------------------------------------------
-#
-# `buildnearinteractionsassembler` selects an assembler; this hook executes it.
-
-"""
-    assemble(assembler::AbstractNearInteractionsAssembler, values, nearvalues, verbose=false)
-    assemble(assembler::AbstractNearInteractionsAssembler, selfvalues, values, nearvalues, verbose=false)
-
-Assemble the near block for the interaction groups supplied by the strategy.
-The five-argument form separates self values; the four-argument form does not.
-Concrete assemblers implement the forms they use. Missing methods raise `MethodError`;
-an intentionally empty assembler must still implement its method.
-"""
-function assemble end
-
 end # module Interfaces

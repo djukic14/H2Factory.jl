@@ -69,8 +69,7 @@ import .Interfaces:
     takefftplan!,
     takeifftplan!,
     assertnosymmetry,
-    aggregateleafchunk!,
-    assemble
+    aggregateleafchunk!
 
 include("maps/traits.jl")
 include("maps/translationcontext.jl")
@@ -129,14 +128,17 @@ end
 
 include("ext/extension_definitions.jl")
 
-include("nearinteractions/abstractnearinteractions.jl")
-include("nearinteractions/passthroughnearinteractions.jl")
-include("nearinteractions/dummynearinteractions.jl")
-include("nearinteractions/randomnearinteractions.jl")
-include("nearinteractions/sparsenearinteractions.jl")
-include("nearinteractions/blocknearinteractions.jl")
+include("kernelmatrices/abstractkernelmatrix.jl")
+include("kernelmatrices/beastkernelmatrix.jl")
+include("kernelmatrices/dummykernelmatrix.jl")
+include("kernelmatrices/randomkernelmatrix.jl")
+include("kernelmatrices/pointkernelmatrix.jl")
+include("kernelmatrices/assemblystrategy.jl")
+include("kernelmatrices/blockassembler.jl")
+
+include("nearinteractions/nearinteractions.jl")
 include("nearinteractions/nearmul.jl")
-include("nearinteractions/strategies.jl")
+include("kernelmatrices/interface.jl")
 
 include("farinteractions/farmul.jl")
 include("farinteractions/traversalhelpers.jl")
@@ -183,18 +185,14 @@ export storetrait, buildstorer
 export StoreAsIs
 
 export AbstractNearInteractionsAssembler
-export PassThroughNearInteractionsAssembler
 export DummyNearInteractionsAssembler
-export RandomNearInteractionsAssembler
 export SparseBEASTNearInteractionsAssembler # requires BEAST to work
 export BlockBEASTNearInteractionsAssembler # requires BEAST and BlockSparseMatrices to work
 
 export AbstractInteractionStrategy, InteractionStrategy
 export nearcriterion, translatingnodesiterator, aggregatenode, aggregationmode
 export AbstractNearInteractionsStrategy,
-    BlockBEASTNearInteractionsStrategy,
-    DummyNearInteractionsStrategy,
-    PassThroughNearInteractionsStrategy
+    BlockBEASTNearInteractionsStrategy, DummyNearInteractionsStrategy
 export buildnearinteractionsassembler, assemblenearinteractions, assembleplans
 
 export I2OTranslationCollection, DummyI2OTranslationCollection

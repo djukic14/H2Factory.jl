@@ -111,11 +111,8 @@ const PUBLIC = [
     :InteractionStrategy,
     :AbstractNearInteractionsAssembler,
     :AbstractNearInteractionsStrategy,
-    :PassThroughNearInteractionsAssembler,
-    :PassThroughNearInteractionsStrategy,
     :DummyNearInteractionsAssembler,
     :DummyNearInteractionsStrategy,
-    :RandomNearInteractionsAssembler,
     :SparseBEASTNearInteractionsAssembler,
     :BlockBEASTNearInteractionsAssembler,
     :BlockBEASTNearInteractionsStrategy,
@@ -155,6 +152,27 @@ const QUALIFIED_EXTENSION = [
     # Workspace construction hooks.
     :buildmoments,
     :buildi2ochannel,
+    # Lazily evaluated kernel matrices and the hooks kernel families implement.
+    :AbstractKernelMatrix,
+    :BEASTKernelMatrix,
+    :buildkernelmatrix,
+    :defaultmatrixdata,
+    :localkernelmatrix,
+    # Assembly settings for kernel matrices, shared by near and far interactions.
+    :AbstractAssemblyStrategy,
+    :AssemblyStrategy,
+    :matrixdata,
+    :storage,
+    :AbstractStorageTrait,
+    :SparseStorage,
+    :BlockSparseStorage,
+    :assembleblocks,
+    :nearblocks,
+    :DummyEntries,
+    :RandomEntries,
+    :DummyKernelMatrix,
+    :RandomKernelMatrix,
+    :PointKernelMatrix,
     # The I2O protocol: coupling, modulation and their composition. `applyi2o!` and `applycoupling!`
     # are ORCHESTRATION, not extension points -- stable qualified names a caller may use, but not
     # declared in `Interfaces` and not to be overridden. `applycoupling!` in particular owns the
@@ -273,9 +291,14 @@ const USERFACING = [
     :TrueTensor,
     :PseudoTensor,
     :InteractionStrategy,
-    :PassThroughNearInteractionsStrategy,
     :DummyNearInteractionsStrategy,
     :BlockBEASTNearInteractionsStrategy,
+    # Kernel-matrix assembly settings a user selects.
+    :AssemblyStrategy,
+    :SparseStorage,
+    :BlockSparseStorage,
+    :DummyEntries,
+    :RandomEntries,
     Symbol("@efie"),
     Symbol("@mw3Dhypersingular"),
     Symbol("@mw3Dweaklysingular"),
@@ -326,9 +349,7 @@ const IMPLEMENTERFACING = [
     :AbstractInteractionStrategy,
     :AbstractNearInteractionsAssembler,
     :AbstractNearInteractionsStrategy,
-    :PassThroughNearInteractionsAssembler,
     :DummyNearInteractionsAssembler,
-    :RandomNearInteractionsAssembler,
     :SparseBEASTNearInteractionsAssembler,
     :BlockBEASTNearInteractionsAssembler,
     :nearcriterion,
@@ -511,11 +532,6 @@ end
         # backend would rather the traversal call it rather than what the backend is. MLFMA supplies
         # three production kernels; a specialization changes performance, never the result.
         :aggregateleafchunk! => false,
-        # Near-interaction assembly: the other half of the near-field protocol, found by the
-        # EXTENSION audit rather than the downstream one. H2BEAST and H2BlockSparse each supply two
-        # methods, and the abstract-typed H2Factory ones have empty bodies, so an assembler that
-        # forgets to implement it silently assembles nothing.
-        :assemble => false,
     )
     for (n, isexported) in migrated
         @test getfield(H2Factory, n) === getfield(H2Factory.Interfaces, n)
