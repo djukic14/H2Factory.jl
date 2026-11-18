@@ -21,7 +21,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 # Keep these bounds aligned with the package's test target.
 [compat]
 AbstractFFTs = "1"
-Aqua = "=0.8.16"
+Aqua = "0.8, =0.8.16"
 BEAST = "2.9"
 BlockSparseMatrices = "0.3"
 ClusterTrees = "0.2"
