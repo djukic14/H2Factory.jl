@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="380" viewBox="0 0 640 380" role="img" aria-labelledby="title desc">
+  <title id="title">Core and workspace</title>
+  <desc id="desc">The outer H2Workspace references the inner shared core. The core contains the tree, interaction plans, leaf collections, transfers, I2O couplings, and near-field matrix. The workspace has its own moments, buffers, scratch, scheduling, and execution schedules. The core is referenced, not copied.</desc>
+  <rect width="640" height="380" rx="12" fill="#28334b"/>
+  <g font-family="sans-serif" fill="#e6edf3">
+    <text x="28" y="45" font-size="26" font-weight="600" fill="#a2b5ff">H2Workspace A</text>
+    <rect x="24" y="72" width="592" height="144" rx="8" fill="#342b40"/>
+    <text x="44" y="109" font-size="24" font-weight="600" fill="#cba4df">Core</text>
+    <text x="44" y="148" font-size="20">Tree, plans and near-field matrix</text>
+    <text x="44" y="181" font-size="20">Leaf collections and translations</text>
+    <text x="28" y="269" font-size="24" font-weight="600" fill="#95d286">Buffers</text>
+    <text x="28" y="305" font-size="20">Moments, vectors</text>
+    <text x="28" y="336" font-size="20">and scratch</text>
+    <text x="350" y="269" font-size="24" font-weight="600" fill="#f49a94">Execution</text>
+    <text x="350" y="305" font-size="20">Scheduling</text>
+    <text x="350" y="336" font-size="20">and schedules</text>
+  </g>
+</svg>
